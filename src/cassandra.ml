@@ -226,7 +226,7 @@ let column c =
 let of_column c =
   {
     c_name = c#grab_name; c_value = c#grab_value;
-    c_timestamp = c#grab_clock#grab_timestamp;
+    c_timestamp = 0.0 ; (* c#grab_clock#grab_timestamp; *)
   }
 
 let supercolumn c =
