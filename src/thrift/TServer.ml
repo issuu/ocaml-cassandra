@@ -17,7 +17,7 @@
  under the License.
 *)
 
-open Thrift
+open Thrift_core
 
 class virtual t
     (pf : Processor.t)

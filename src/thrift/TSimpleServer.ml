@@ -17,7 +17,7 @@
  under the License.
 *)
 
-open Thrift
+open Thrift_core
 module S = TServer
 
 class t pf st tf ipf opf =

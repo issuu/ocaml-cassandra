@@ -87,7 +87,7 @@ type mutation =
     ]
 
 type connection = {
-  proto : Thrift.Protocol.t;
+  proto : Thrift_core.Protocol.t;
   client : Cassandra.client;
 }
 
@@ -138,17 +138,17 @@ let cassandra_error e =
 
 let cassandra_error_low_level e = cassandra_error (Low_level e)
 
-module TAE = Thrift.Application_Exn
+module TAE = Thrift_core.Application_Exn
 
 DEFINE Wrap(x) =
   try
     x
   with
-    | Thrift.Thrift_error s -> cassandra_error_low_level (Protocol_error s)
-    | Thrift.Field_empty s ->
+    | Thrift_core.Thrift_error s -> cassandra_error_low_level (Protocol_error s)
+    | Thrift_core.Field_empty s ->
         cassandra_error_low_level (Protocol_error (sprintf "Field empty: %s" s))
-    | Thrift.Transport.E (_, s) -> cassandra_error_low_level (Transport_error s)
-    | Thrift.Protocol.E (_, s) -> cassandra_error_low_level (Protocol_error s)
+    | Thrift_core.Transport.E (_, s) -> cassandra_error_low_level (Transport_error s)
+    | Thrift_core.Protocol.E (_, s) -> cassandra_error_low_level (Protocol_error s)
     | TAE.E t ->
         let s = match t#get_type with
           | TAE.UNKNOWN -> "UNKNOWN"

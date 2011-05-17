@@ -211,7 +211,7 @@ val describe_version : keyspace -> string
 
 (** get the token ring: a map of ranges to host addresses,
     represented as a set of TokenRange instead of a map from range
-    to list of endpoints, because you can't use Thrift structs as
+    to list of endpoints, because you can't use Thrift_core_core structs as
     map keys:
     https://issues.apache.org/jira/browse/THRIFT-162
 

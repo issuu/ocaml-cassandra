@@ -17,7 +17,7 @@
  under the License.
 *)
 
-open Thrift
+open Thrift_core
 
 module P = Protocol
 

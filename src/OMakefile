@@ -13,9 +13,11 @@ OBJS[] =
 
 OCAMLINCLUDES = $(file thrift)
 
-OCamlPackage(cassandra_thrift, \
-	     $(removesuffix $(ls thrift/*.ml)) \
-	     $(addprefix gen-ocaml/, $(OBJS)))
+OCamlPackage(cassandra_thrift, thrift/thrift_core thrift/TChannelTransport thrift/TBinaryProtocol thrift/TFramedTransport thrift/TSocket thrift/TServer thrift/TSimpleServer thrift/TServerSocket thrift/TThreadedServer gen-ocaml/cassandra_types gen-ocaml/cassandra_consts gen-ocaml/Cassandra)
+
+# \
+#	     $(removesuffix $(ls thrift/*.ml)) \
+#	     $(addprefix gen-ocaml/, $(OBJS)))
 
 OCamlLibrary(cassandra, cassandra_thrift cassandra cassandra_lwt)
 
