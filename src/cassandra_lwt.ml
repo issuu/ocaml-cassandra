@@ -11,9 +11,12 @@ and cpool =
 
 let check_conn (conn, _) f =
   (* TODO: dummy request to make sure the conn is OK? *)
+  (*
   try
     f (Cassandra.valid_connection conn)
-  with _ -> f false
+  with _ -> f false *)
+  (* If there is an error in the cassandra call, we don't take the risk, let's get a fresh connection *)
+  f false 
 
 let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
   let rec cp = 
