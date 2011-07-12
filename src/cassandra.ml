@@ -64,7 +64,7 @@ type timestamp = Int64.t
 type column = { c_name : string; c_value : string; c_timestamp : timestamp; }
 type supercolumn = { sc_name : string; sc_columns : column list }
 
-type level = [ `ZERO | `ONE | `QUORUM | `DCQUORUM | `DCQUORUMSYNC | `ALL | `ANY ]
+type level = [ `ONE | `QUORUM | `LOCAL_QUORUM | `EACH_QUORUM | `ALL | `ANY | `TWO | `THREE ]
 
 type access_level = [ `NONE | `READONLY | `READWRITE | `FULL ]
 
@@ -87,7 +87,7 @@ type mutation =
     ]
 
 type connection = {
-  proto : Thrift_core.Protocol.t;
+  proto : Thrift.Protocol.t;
   client : Cassandra.client;
 }
 
@@ -138,17 +138,18 @@ let cassandra_error e =
 
 let cassandra_error_low_level e = cassandra_error (Low_level e)
 
-module TAE = Thrift_core.Application_Exn
+module TAE = Thrift.Application_Exn
 
 DEFINE Wrap(x) =
   try
     x
   with
-    | Thrift_core.Thrift_error s -> cassandra_error_low_level (Protocol_error s)
-    | Thrift_core.Field_empty s ->
+    | Thrift.Thrift_error -> cassandra_error_low_level (Protocol_error
+    "Thrift_error")
+    | Thrift.Field_empty s ->
         cassandra_error_low_level (Protocol_error (sprintf "Field empty: %s" s))
-    | Thrift_core.Transport.E (_, s) -> cassandra_error_low_level (Transport_error s)
-    | Thrift_core.Protocol.E (_, s) -> cassandra_error_low_level (Protocol_error s)
+    | Thrift.Transport.E (_, s) -> cassandra_error_low_level (Transport_error s)
+    | Thrift.Protocol.E (_, s) -> cassandra_error_low_level (Protocol_error s)
     | TAE.E t ->
         let s = match t#get_type with
           | TAE.UNKNOWN -> "UNKNOWN"
@@ -157,8 +158,6 @@ DEFINE Wrap(x) =
           | TAE.WRONG_METHOD_NAME -> "WRONG_METHOD_NAME"
           | TAE.BAD_SEQUENCE_ID -> "BAD_SEQUENCE_ID"
           | TAE.MISSING_RESULT -> "MISSING_RESULT"
-          | TAE.INTERNAL_ERROR -> "INTERNAL_ERROR"
-          | TAE.PROTOCOL_ERROR -> "PROTOCOL_ERROR"
         in cassandra_error_low_level (Application_error s)
     | NotFoundException _ -> cassandra_error Not_found
     | InvalidRequestException e ->
@@ -176,20 +175,12 @@ DEFINE Wrap_opt(x) =
     Some (x)
   with Cassandra_error(Not_found, _) -> None
 
-open AccessLevel
-
-let of_access_level = function
-  | NONE -> `NONE
-  | READONLY -> `READONLY
-  | READWRITE -> `READWRITE
-  | FULL -> `FULL
-
 let login ks credentials = Wrap
   let auth = new authenticationRequest in
   let h = Hashtbl.create 13 in
     List.iter (fun (k, v) -> Hashtbl.add h k v) credentials;
     auth#set_credentials h;
-    of_access_level (ks.ks_client#login auth)
+    ks.ks_client#login auth
 
 let set_keyspace t ?(level = `ONE) ?(rewrite_keys = []) name =
   let rewrite_map =
@@ -203,24 +194,23 @@ let set_keyspace t ?(level = `ONE) ?(rewrite_keys = []) name =
 open ConsistencyLevel
 
 let consistency_level = function
-  | `ZERO -> ZERO
   | `ONE -> ONE
   | `QUORUM -> QUORUM
-  | `DCQUORUM -> DCQUORUM
-  | `DCQUORUMSYNC -> DCQUORUMSYNC
+  | `LOCAL_QUORUM -> LOCAL_QUORUM
+  | `EACH_QUORUM -> EACH_QUORUM
   | `ALL -> ALL
   | `ANY -> ANY
+  | `TWO -> TWO
+  | `THREE -> THREE
 
 let clevel ks =
   Option.map_default consistency_level (consistency_level ks.ks_level)
-
-let mk_clock t = let c = new clock in c#set_timestamp t; c
 
 let column c =
   let r = new column in
     r#set_name c.c_name;
     r#set_value c.c_value;
-    r#set_clock (mk_clock c.c_timestamp);
+    r#set_timestamp c.c_timestamp;
     r
 
 let of_column c =
@@ -382,8 +372,6 @@ let mk_timestamp = function
     None -> make_timestamp ()
   | Some t -> t
 
-let mk_clock t = mk_clock (mk_timestamp t)
-
 let make_column name ?timestamp value =
   { c_name=name; c_timestamp=mk_timestamp timestamp; c_value=value; }
 
@@ -399,24 +387,24 @@ let remove_key t ?level ~cf ?timestamp key = Wrap
   let cpath = new columnPath in
     cpath#set_column_family cf;
     t.ks_client#remove (map_key t ~cf key) cpath
-      (mk_clock timestamp) (clevel t level)
+      (mk_timestamp timestamp) (clevel t level)
 
 let remove_column t ?level ~cf ~key ?sc ?timestamp name = Wrap
   t.ks_client#remove (map_key t ~cf key)
     (column_path ~cf ?sc name)
-    (mk_clock timestamp) (clevel t level)
+    (mk_timestamp timestamp) (clevel t level)
 
 let remove_supercolumn t ?level ~cf ~key ?timestamp name = Wrap
   t.ks_client#remove (map_key t ~cf key)
     (supercolumn_path ~cf name)
-    (mk_clock timestamp) (clevel t level)
+    (mk_timestamp timestamp) (clevel t level)
 
 let truncate t ~cf = Wrap
   t.ks_client#truncate cf
 
 let make_deletion ?sc ?predicate timestamp =
   let r = new deletion in
-    r#set_clock (mk_clock timestamp);
+    r#set_timestamp timestamp;
     Option.may r#set_super_column sc;
     Option.may r#set_predicate (Option.map slice_predicate predicate);
     r
@@ -437,12 +425,13 @@ let mutation (m : mutation) =
             r#set_column_or_supercolumn (make_column_or_supercolumn ~super ())
         | `Delete (timestamp, what) ->
             r#set_deletion begin match what with
-                `Key -> make_deletion timestamp
+                `Key -> make_deletion (mk_timestamp timestamp)
               | `Super_column sc ->
-                  make_deletion ~sc timestamp
-              | `Columns predicate -> make_deletion ~predicate timestamp
+                  make_deletion ~sc (mk_timestamp timestamp)
+              | `Columns predicate -> make_deletion ~predicate (mk_timestamp
+              timestamp)
               | `Sub_columns (sc, predicate) ->
-                  make_deletion ~sc ~predicate timestamp
+                  make_deletion ~sc ~predicate (mk_timestamp timestamp)
             end
     end;
     r

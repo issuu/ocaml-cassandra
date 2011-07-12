@@ -25,8 +25,7 @@ type timestamp = Int64.t
 type column = private { c_name : string; c_value : string; c_timestamp : timestamp; }
 type supercolumn = private { sc_name : string; sc_columns : column list }
 
-type level =
-    [ `ZERO | `ONE | `QUORUM | `DCQUORUM | `DCQUORUMSYNC | `ALL | `ANY ]
+type level = [ `ONE | `QUORUM | `LOCAL_QUORUM | `EACH_QUORUM | `ALL | `ANY | `TWO | `THREE ]
 
 type access_level = 
     [ `NONE | `READONLY | `READWRITE | `FULL ]
@@ -75,7 +74,7 @@ val digest_rewriter : key_rewriter
 val set_keyspace : connection -> ?level:level ->
   ?rewrite_keys:(string * key_rewriter) list -> string -> keyspace
 
-val login : keyspace -> (string * string) list -> access_level
+val login : keyspace -> (string * string) list -> unit
 
 val get : keyspace -> ?level:level ->
   cf:string -> key:string -> ?sc:string -> string -> column option
@@ -211,7 +210,7 @@ val describe_version : keyspace -> string
 
 (** get the token ring: a map of ranges to host addresses,
     represented as a set of TokenRange instead of a map from range
-    to list of endpoints, because you can't use Thrift_core_core structs as
+    to list of endpoints, because you can't use Thrift structs as
     map keys:
     https://issues.apache.org/jira/browse/THRIFT-162
 
