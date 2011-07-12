@@ -17,7 +17,7 @@
  under the License.
 *)
 
-open Thrift_core
+open Thrift
 
 module T = Transport
 
