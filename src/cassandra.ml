@@ -175,6 +175,11 @@ DEFINE Wrap_opt(x) =
     Some (x)
   with Cassandra_error(Not_found, _) -> None
 
+DEFINE WWrap_opt(x) =
+  try
+    Some (Wrap (x))
+  with Cassandra_error(Not_found, _) -> None
+
 let login ks credentials = Wrap
   let auth = new authenticationRequest in
   let h = Hashtbl.create 13 in
@@ -296,7 +301,7 @@ let of_key_slice t cf r =
 let of_key_super_slice t cf r =
   (unmap_key t cf r#grab_key, get_supercolumns r#grab_columns)
 
-let get t ?level ~cf ~key ?sc column = Wrap_opt
+let get t ?level ~cf ~key ?sc column = WWrap_opt
   let r = t.ks_client#get
             (map_key t ~cf key) (column_path ~cf ?sc column) (clevel t level)
   in of_column r#grab_column
