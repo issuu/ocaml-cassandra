@@ -13,7 +13,7 @@ OBJS[] =
 
 OCAMLINCLUDES = $(file thrift)
 
-OCamlPackage(cassandra_thrift, thrift/Thrift thrift/TChannelTransport thrift/TBinaryProtocol thrift/TFramedTransport thrift/TSocket thrift/TServer thrift/TSimpleServer thrift/TServerSocket thrift/TThreadedServer gen-ocaml/cassandra_types gen-ocaml/cassandra_consts gen-ocaml/Cassandra)
+OCamlPackage(cassandra_thrift, thrift/Thrift thrift/TChannelTransport thrift/TBinaryProtocol thrift/TFramedTransport thrift/TSocket thrift/TServer thrift/TSimpleServer thrift/TServerSocket gen-ocaml/cassandra_types gen-ocaml/cassandra_consts gen-ocaml/Cassandra)
 
 # \
 #	     $(removesuffix $(ls thrift/*.ml)) \
