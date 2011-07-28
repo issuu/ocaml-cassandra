@@ -1,4 +1,3 @@
-open Lwt_preemptive
 open Lwt
 
 type conn_pool = cpool Lazy.t
@@ -28,7 +27,7 @@ let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
     let cp = Lazy.force cp in
       if cp.servers = [||] then failwith "No servers available"
       else
-        detach
+        Lwt_preemptive.detach
           (fun (host, port) -> 
              let conn = Cassandra.connect ~host port in
              let ks = Cassandra.set_keyspace conn ?level ?rewrite_keys keyspace in
@@ -44,7 +43,7 @@ module C = Cassandra
 
 let rec with_ks t ?(attempts = 5) ?(wait_period = 0.1) f =
   try
-    Lwt_pool.use (Lazy.force t).pool (detach (fun (_, ks) -> f ks))
+    Lwt_pool.use (Lazy.force t).pool (Lwt_preemptive.detach (fun (_, ks) -> f ks))
   with
     | C.Cassandra_error (ty, _) as e -> begin match ty with
           C.Low_level
