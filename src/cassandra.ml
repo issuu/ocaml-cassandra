@@ -1,19 +1,13 @@
 (* Copyright (c) 2009 Mauricio Fernández <mfp@acm.org> *)
 
-IFDEF EXTLIB THEN
-  open ExtList
-  open ExtHashtbl
-  open ExtString
-ELSE
-  module Option = BatOption
-  module Hashtbl =
-  struct
-    include BatHashtbl
-    let map f h = map (fun k v -> f v) h
-  end
-  module List = struct include List include BatList end
-  module String = struct include String include BatString end
-ENDIF
+module Option = BatOption
+module Hashtbl =
+struct
+  include BatHashtbl
+  let map f h = map (fun k v -> f v) h
+end
+module List = struct include List include BatList end
+module String = struct include String include BatString end
 
 open Printf
 open Cassandra_thrift

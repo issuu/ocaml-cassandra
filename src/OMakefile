@@ -25,7 +25,7 @@ $(addsuffixes .cmx .cmo .cmi .o, cassandra): cassandra_thrift.cmi
 
 section
     OCAMLPACKS[] += camlp4.macro
-    OCAMLFINDFLAGS += -syntax camlp4o -ppopt $(DEFINES)
+    OCAMLFINDFLAGS += -syntax camlp4o
     cassandra.cmi cassandra.cmx cassandra.cmo cassandra.o:
 
 # section
