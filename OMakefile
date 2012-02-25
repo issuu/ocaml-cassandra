@@ -20,5 +20,3 @@ CASSANDRA_INCLUDE = $(file src)
 CASSANDRA_LIB = $(file src)/cassandra
 
 export CASSANDRA_INCLUDE CASSANDRA_LIB
-
-
