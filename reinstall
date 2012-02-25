@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ocamlfind remove cassandra || true
 ocamlfind install cassandra src/META src/*.{mli,cmi,cmx,cmxa,cma,a}
