@@ -1,13 +1,11 @@
 (* Copyright (c) 2009 Mauricio Fernández <mfp@acm.org> *)
 
-module Option = BatOption
+open Batteries
 module Hashtbl =
 struct
-  include BatHashtbl
+  include Hashtbl
   let map f h = map (fun k v -> f v) h
 end
-module List = struct include List include BatList end
-module String = struct include String include BatString end
 
 open Printf
 open Cassandra_thrift
@@ -607,4 +605,3 @@ let describe_partitioner t = Wrap
 
 let describe_keyspace t = Wrap
   ksdef (t.ks_client#describe_keyspace t.ks_name)
-
