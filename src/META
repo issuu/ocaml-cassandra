@@ -1,6 +1,6 @@
 name="cassandra"
 version="git"
 description="cassandra"
-requires="batteries"
+requires="batteries,lwt.preemptive"
 archive(byte)="cassandra.cma"
 archive(native)="cassandra.cmxa"

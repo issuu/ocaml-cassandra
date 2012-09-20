@@ -1,4 +1,5 @@
 open Lwt
+open Batteries
 
 type conn_pool = cpool Lazy.t
 and cpool =
@@ -6,7 +7,7 @@ and cpool =
       mutable servers : (string * int) array;
       pool : (Cassandra.connection * Cassandra.keyspace) Lwt_pool.t;
     }
-    
+
 
 let check_conn (conn, _) f =
   (* TODO: dummy request to make sure the conn is OK? *)
@@ -15,10 +16,10 @@ let check_conn (conn, _) f =
     f (Cassandra.valid_connection conn)
   with _ -> f false *)
   (* If there is an error in the cassandra call, we don't take the risk, let's get a fresh connection *)
-  f false 
+  f false
 
 let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
-  let rec cp = 
+  let rec cp =
     lazy {
       servers = Array.of_list servers;
       pool = Lwt_pool.create max_conns ~check:check_conn create;
@@ -28,7 +29,7 @@ let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
       if cp.servers = [||] then failwith "No servers available"
       else
         Lwt_preemptive.detach
-          (fun (host, port) -> 
+          (fun (host, port) ->
              let conn = Cassandra.connect ~host port in
              let ks = Cassandra.set_keyspace conn ?level ?rewrite_keys keyspace in
                begin match credentials with
@@ -70,7 +71,7 @@ let get' t ?level ~cf ~key col =
   with_ks t (fun ks -> Cassandra.get' ks ?level ~cf ~key col)
 
 let get_supercolumn = get'
-                        
+
 let get_slice t ?level ~cf ~key ?sc pred =
   with_ks t (fun ks -> Cassandra.get_slice ks ?level ~cf ~key ?sc pred)
 

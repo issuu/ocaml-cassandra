@@ -5,6 +5,8 @@ SRCS[] =
     Cassandra.mli
     cassandra_types.ml
     cassandra_types.mli
+    cassandra_lwt.ml
+    cassandra_lwt.mli
 
 OBJS[] =
     cassandra_types
@@ -19,7 +21,7 @@ OCamlPackage(cassandra_thrift, thrift/Thrift thrift/TChannelTransport thrift/TBi
 #	     $(removesuffix $(ls thrift/*.ml)) \
 #	     $(addprefix gen-ocaml/, $(OBJS)))
 
-OCamlLibrary(cassandra, cassandra_thrift cassandra)
+OCamlLibrary(cassandra, cassandra_thrift cassandra cassandra_lwt)
 
 $(addsuffixes .cmx .cmo .cmi .o, cassandra): cassandra_thrift.cmi
 
@@ -28,11 +30,11 @@ section
     OCAMLFINDFLAGS += -syntax camlp4o
     cassandra.cmi cassandra.cmx cassandra.cmo cassandra.o:
 
-# section
-#     OCAMLPACKS[] += lwt.syntax
-#     OCAMLFINDFLAGS += -syntax camlp4o
-#     cassandra_lwt.cmi cassandra_lwt.cmx cassandra_lwt.cmo cassandra_lwt.o: \
-# 	cassandra.cmi cassandra.cmx
+section
+    OCAMLPACKS[] += lwt.syntax
+    OCAMLFINDFLAGS += -syntax camlp4o
+    cassandra_lwt.cmi cassandra_lwt.cmx cassandra_lwt.cmo cassandra_lwt.o: \
+        cassandra.cmi cassandra.cmx
 
 .DEFAULT: cassandra.cma cassandra.cmxa
 
@@ -49,4 +51,3 @@ section
 
 clean:
     rm -f $(filter-proper-targets $(ls R, .)) *.annot *.s
-
