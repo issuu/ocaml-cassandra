@@ -27,7 +27,7 @@ type supercolumn = private { sc_name : string; sc_columns : column list }
 
 type level = [ `ONE | `QUORUM | `LOCAL_QUORUM | `EACH_QUORUM | `ALL | `ANY | `TWO | `THREE ]
 
-type access_level = 
+type access_level =
     [ `NONE | `READONLY | `READWRITE | `FULL ]
 
 type slice_predicate =
@@ -223,4 +223,3 @@ val describe_partitioner : keyspace -> string
 
 (** describe specified keyspace *)
 val describe_keyspace : keyspace -> ksdef
-
