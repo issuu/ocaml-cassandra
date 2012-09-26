@@ -1,44 +1,38 @@
 open Lwt
 open Batteries
 
-type conn_pool = cpool Lazy.t
-and cpool =
-    {
-      mutable servers : (string * int) array;
-      pool : (Cassandra.connection * Cassandra.keyspace) Lwt_pool.t;
-    }
-
+type conn_pool = (Cassandra.connection * Cassandra.keyspace) Lwt_pool.t Lazy.t
 
 let check_conn (conn, _) f =
-  (* TODO: dummy request to make sure the conn is OK? *)
-  (*
-  try
-    f (Cassandra.valid_connection conn)
-  with _ -> f false *)
-  (* If there is an error in the cassandra call, we don't take the risk, let's get a fresh connection *)
+  let () = 
+    try
+      (* Close the connection *)
+      Cassandra.disconnect conn;
+    with _ -> ()
+  in
   f false
 
 let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
-  let rec cp =
-    lazy {
-      servers = Array.of_list servers;
-      pool = Lwt_pool.create max_conns ~check:check_conn create;
-    }
-  and create () =
-    let cp = Lazy.force cp in
-      if cp.servers = [||] then failwith "No servers available"
-      else
-        Lwt_preemptive.detach
-          (fun (host, port) ->
-             let conn = Cassandra.connect ~host port in
-             let ks = Cassandra.set_keyspace conn ?level ?rewrite_keys keyspace in
-               begin match credentials with
-                   Some [] | None -> ()
-                 | Some l -> let (_:unit) = Cassandra.login ks l in ()
-               end;
-               (conn, ks))
-          cp.servers.(Random.int (Array.length cp.servers))
-  in cp
+  if servers = [] then failwith "No servers available";
+  let servers = Array.of_list servers in;
+  let create () =
+    let connect (host, port) =
+      try 
+        let conn = Cassandra.connect ~host port in
+        let ks = Cassandra.set_keyspace conn ?level ?rewrite_keys keyspace in
+        let () = match credentials with
+          | Some [] | None -> ()
+          | Some l -> Cassandra.login ks l
+        in
+        `Connection (conn, ks)
+      with
+      | e -> `Exception (e, Printexc.get_backtrace ())
+    in
+    let server = servers.(Random.int (Array.length servers)) in
+    lwt_match Lwt_preemptive.detach connect server with
+    | `Connection conn -> return conn
+    | `Exception e, bt -> fail Cassandra.Cassandra_error (Unknown_error (e, bt), "Connection error")
+  lazy (Lwt_pool.create max_conns ~check:check_conn create);
 
 module C = Cassandra
 
