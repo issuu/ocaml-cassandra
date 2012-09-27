@@ -4,7 +4,7 @@ open Batteries
 type conn_pool = (Cassandra.connection * Cassandra.keyspace) Lwt_pool.t Lazy.t
 
 let check_conn (conn, _) f =
-  let () = 
+  let () =
     try
       (* Close the connection *)
       Cassandra.disconnect conn;
@@ -14,10 +14,10 @@ let check_conn (conn, _) f =
 
 let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
   if servers = [] then failwith "No servers available";
-  let servers = Array.of_list servers in;
+  let servers = Array.of_list servers in
   let create () =
     let connect (host, port) =
-      try 
+      try
         let conn = Cassandra.connect ~host port in
         let ks = Cassandra.set_keyspace conn ?level ?rewrite_keys keyspace in
         let () = match credentials with
@@ -29,16 +29,17 @@ let make_pool servers ?credentials ?level ?rewrite_keys ~keyspace max_conns =
       | e -> `Exception (e, Printexc.get_backtrace ())
     in
     let server = servers.(Random.int (Array.length servers)) in
-    lwt_match Lwt_preemptive.detach connect server with
+    match_lwt Lwt_preemptive.detach connect server with
     | `Connection conn -> return conn
-    | `Exception e, bt -> fail Cassandra.Cassandra_error (Unknown_error (e, bt), "Connection error")
+    | `Exception (e, bt) -> raise_lwt (Cassandra.Cassandra_error (Cassandra.Unknown_error (e, bt), "Connection error"))
+  in
   lazy (Lwt_pool.create max_conns ~check:check_conn create);
 
 module C = Cassandra
 
 let rec with_ks t ?(attempts = 5) ?(wait_period = 0.1) f =
   try
-    Lwt_pool.use (Lazy.force t).pool (Lwt_preemptive.detach (fun (_, ks) -> f ks))
+    Lwt_pool.use (Lazy.force t) (Lwt_preemptive.detach (fun (_, ks) -> f ks))
   with
     | C.Cassandra_error (ty, _) as e -> begin match ty with
           C.Low_level
