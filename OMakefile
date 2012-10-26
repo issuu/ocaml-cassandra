@@ -4,7 +4,7 @@ NATIVE_ENABLED = true
 USE_OCAMLFIND  = true
 
 OCAMLPACKS[] = unix lwt batteries
-OCAMLFLAGS =
+OCAMLFLAGS += -g
 
 if $(not $(defined THRIFT))
     THRIFT = $(file $(getenv THRIFT, thrift))
