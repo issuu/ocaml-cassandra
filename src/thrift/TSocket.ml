@@ -39,7 +39,6 @@ object (self)
         None -> ()
       | Some(inc,out) -> (Unix.shutdown_connection inc;
                           close_in inc;
-                          close_out_noerr out;
                           chans <- None)
   method read buf off len = match chans with
       None -> raise (T.E (T.NOT_OPEN, "TSocket: Socket not open"))
