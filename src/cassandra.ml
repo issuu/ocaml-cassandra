@@ -150,6 +150,8 @@ DEFINE Wrap(x) =
           | TAE.WRONG_METHOD_NAME -> "WRONG_METHOD_NAME"
           | TAE.BAD_SEQUENCE_ID -> "BAD_SEQUENCE_ID"
           | TAE.MISSING_RESULT -> "MISSING_RESULT"
+          | TAE.PROTOCOL_ERROR -> "PROTOCOL_ERROR"
+          | TAE.INTERNAL_ERROR -> "INTERNAL_ERROR"
         in cassandra_error_low_level (Application_error s)
     | NotFoundException _ -> cassandra_error Not_found
     | InvalidRequestException e ->
@@ -253,7 +255,7 @@ let slice_predicate p =
             range#set_start start;
             range#set_finish finish;
             range#set_reversed reversed;
-            range#set_count count;
+            range#set_count (Int32.of_int count);
             r#set_slice_range range
     end;
     r
@@ -275,10 +277,10 @@ let key_range t cf r =
       match r with
           `Key (start, stop, count) -> o#set_start_key (map start);
                                        o#set_end_key (map stop);
-                                       o#set_count count
+                                       o#set_count (Int32.of_int count)
         | `Token (start, stop, count) -> o#set_start_token (map start);
                                          o#set_end_token (map stop);
-                                         o#set_count count
+                                         o#set_count (Int32.of_int count)
     end;
     o
 
@@ -350,8 +352,8 @@ let multiget_superslice t ?level ~cf keys pred = Wrap
     with NF -> Hashtbl.map to_super_cols h
 
 let count t ?level ~cf ~key ?sc pred = Wrap
-  t.ks_client#get_count
-    (map_key t ~cf key) (column_parent cf ?sc) (slice_predicate pred) (clevel t level)
+  Int32.to_int (t.ks_client#get_count
+      (map_key t ~cf key) (column_parent cf ?sc) (slice_predicate pred) (clevel t level))
 
 let get_range_slices t ?level ~cf ?sc pred range = Wrap
   let r = t.ks_client#get_range_slices
@@ -575,7 +577,7 @@ let cfdef (cf : cfDef) =
 let ksdef (ks : ksDef) =
   object
     method name = ks#grab_name
-    method rf = ks#grab_replication_factor
+    method rf = (Int32.to_int ks#grab_replication_factor)
     method strategy_class = ks#grab_strategy_class
     method strategy_options = ks#grab_strategy_options
     method cf_defs = List.map cfdef ks#grab_cf_defs
